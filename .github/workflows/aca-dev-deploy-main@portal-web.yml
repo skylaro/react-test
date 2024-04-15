@@ -1,0 +1,43 @@
+name: portal.dev.closeknit.com auto deploy off main
+# push to main. update portal.dev.closeknit.com
+
+on:
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/aca-dev-portal-web-main.yml'
+
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #required for requesting OIDC JWT Token
+      contents: read #required when GH token is used to auth w/ private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.PORTALWEB_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.PORTALWEB_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.PORTALWEB_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: sharednpeastusacr01.azurecr.io
+          registryUsername: ${{ secrets.PORTALWEB_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.PORTALWEB_REGISTRY_PASSWORD }}
+          containerAppName: portal-web
+          resourceGroup: ckapp-poc-dev-aca
+          imageToBuild: sharednpeastusacr01.azurecr.io/portal-web:${{ github.sha }}
+          _buildArgumentsKey_: | # linter error.. camilo can't find what this is for yet
+            _buildArgumentsValues_
